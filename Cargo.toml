@@ -4,9 +4,13 @@ name = "sound_stream"
 version = "0.0.1"
 authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
 
+[lib]
+name = "sound_stream"
+
 [dependencies.rust-portaudio]
 # git = "https://github.com/jeremyletang/rust-portaudio"
 path = "../rust-portaudio"
 
 [dependencies.time]
 git = "https://github.com/rust-lang/time"
+
