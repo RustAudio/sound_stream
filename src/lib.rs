@@ -1,15 +1,14 @@
 
-#![deny(missing_docs)]
+#![feature(default_type_params, if_let, globs, macro_rules, unboxed_closures)]
 
 extern crate portaudio;
+extern crate time;
 
-pub type DeltaTime = f64;
+pub use event::SoundStream;
+pub use event::Event;
+pub use settings::Settings;
 
-/// An event to be returned by the Event iterator.
-pub enum Event {
-    Update(DeltaTime),
-    In,
-    Out,
-}
-
-
+pub mod buffer;
+pub mod error;
+pub mod event;
+pub mod settings;
