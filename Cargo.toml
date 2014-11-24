@@ -1,0 +1,8 @@
+[package]
+
+name = "sound_stream"
+version = "0.0.1"
+authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
+
+[dependencies.rust-portaudio]
+git = "https://github.com/jeremyletang/rust-portaudio"
