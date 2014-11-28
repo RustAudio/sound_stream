@@ -27,6 +27,10 @@ git = "https://github.com/mitchmindtree/sound_stream"
 
 For more details, see [the example](https://github.com/mitchmindtree/sound_stream/blob/master/examples/test.rs#L1).
 
+PortAudio
+---------
+
+SoundStream requires that you have the PortAudio lib installed on your system. You can download it [here](http://www.portaudio.com/download.html).
 
 License
 -------
