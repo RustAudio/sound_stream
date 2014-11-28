@@ -16,6 +16,7 @@ use time::precise_time_ns;
 pub type DeltaTimeNs = u64;
 
 /// An event to be returned by the SoundStream.
+#[deriving(Show)]
 pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
     /// Audio awaits on the stream's input buffer.
     In(Vec<I>, Settings),
@@ -25,7 +26,7 @@ pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
     Update(DeltaTimeNs, Settings),
 }
 
-/// Represents the curreent state of the SoundStream.
+/// Represents the current state of the SoundStream.
 pub enum State {
     In,
     Out,
@@ -57,9 +58,6 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
         let input = pa::device::get_default_input();
         let output = pa::device::get_default_output();
 
-        // Retrieve the number of channels from the given Settings.
-        let num_channels = settings.channels as i32;
-
         // Determine the sample format for both the input and output.
         let default_input_sample: I = ::std::default::Default::default();
         let default_output_sample: O = ::std::default::Default::default();
@@ -79,7 +77,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
         // Construct the input stream parameters.
         let input_stream_params = pa::StreamParameters {
             device: input,
-            channel_count: num_channels,
+            channel_count: settings.channels as i32,
             sample_format: input_sample_format,
             suggested_latency: input_latency,
         };
@@ -87,7 +85,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
         // Construct the output stream parameters.
         let output_stream_params = pa::StreamParameters {
             device: output,
-            channel_count: num_channels,
+            channel_count: settings.channels as i32,
             sample_format: output_sample_format,
             suggested_latency: output_latency,
         };
@@ -96,7 +94,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
         let mut stream = pa::Stream::new();
 
 
-        // And now let's kick it off!
+        // Here we open the stream.
         if let Err(err) = stream.open(Some(&input_stream_params),
                                       Some(&output_stream_params),
                                       settings.sample_hz as f64,
@@ -105,15 +103,27 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
             return Err(Error::PortAudio(err))
         }
 
+        // And now let's kick it off!
+        if let Err(err) = stream.start() {
+            return Err(Error::PortAudio(err))
+        }
+
         Ok(SoundStream {
             prev_state: State::Update,
             last_time: 0,
             stream: stream,
             settings: settings,
-            output_buffer: AudioBuffer::zeroed(),
+            output_buffer: AudioBuffer::zeroed((settings.frames * settings.channels) as uint),
             marker: ContravariantLifetime,
             marker2: NoCopy,
         })
+    }
+
+    /// Close the stream and terminate PortAudio.
+    pub fn close(&mut self) -> Result<(), Error> {
+        if let Err(err) = self.stream.close() { return Err(Error::PortAudio(err)) }
+        if let Err(err) = pa::terminate() { return Err(Error::PortAudio(err)) }
+        Ok(())
     }
 
 }
@@ -126,9 +136,15 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
         let new_state = match self.prev_state {
             State::In => State::Out,
             State::Out => {
-                let output_buffer = self.output_buffer.clone_as_vec();
-                self.output_buffer = AudioBuffer::zeroed();
-                while self.stream.get_stream_write_available() == Ok(None) {}
+                use std::mem::replace;
+                let len = (self.settings.frames * self.settings.channels) as uint;
+                let output_buffer = replace(&mut self.output_buffer, AudioBuffer::zeroed(len))
+                    .clone_as_vec();
+                if let Err(err) = wait_for_stream(|| self.stream.get_stream_write_available()) {
+                    println!("Breaking from loop as sound_stream failed to \
+                             write to the PortAudio stream: {}.", err);
+                    return None
+                }
                 match self.stream.write(output_buffer, self.settings.frames as u32) {
                     Ok(()) => State::Update,
                     Err(err) => {
@@ -144,8 +160,13 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
         // Prepare the next event in accordance with the new state. 
         self.prev_state = new_state;
         match new_state {
+
             State::In => {
-                while self.stream.get_stream_read_available() == Ok(None) {}
+                if let Err(err) = wait_for_stream(|| self.stream.get_stream_read_available()) {
+                    println!("Breaking from loop as sound_stream failed to \
+                             write to the PortAudio stream: {}.", err);
+                    return None
+                }
                 match self.stream.read(self.settings.frames as u32) {
                     Ok(input_buffer) => Some(Event::In(input_buffer, self.settings)),
                     Err(err) => {
@@ -155,18 +176,42 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
                     },
                 }
             },
+
             State::Out => {
-                let SoundStream { output_buffer: ref mut buffer, settings: settings, .. } = *self;
-                Some(Event::Out(buffer, settings))
+                let SoundStream { output_buffer: ref mut buffer, .. } = *self;
+
+                // Here we obtain a mutable reference to the buffer with the correct lifetime so
+                // that we can return it via our `Event::Out`. Note: This means that a twisted,
+                // evil person could do horrific things with this iterator by calling `.next()`
+                // multiple times and storing aliasing mutable references to our output buffer,
+                // HOWEVER - this is extremely unlikely to occur in practise as the api is designed
+                // in a way that the reference is intended to die at the end of each loop before
+                // `.next()` even gets called again.
+                let output_buffer = unsafe { ::std::mem::transmute(buffer) };
+
+                Some(Event::Out(output_buffer, self.settings))
             },
+
             State::Update => {
                 let this_time = precise_time_ns();
                 let diff_time = this_time - self.last_time;
                 self.last_time = this_time;
                 Some(Event::Update(diff_time, self.settings))
             },
+
         }
 
+    }
+}
+
+/// Wait for the given stream to become ready for reading/writing.
+fn wait_for_stream(f: || -> Result<Option<i64>, pa::Error>) -> Result<i64, Error> {
+    loop {
+        match f() {
+            Ok(None) => (),
+            Ok(Some(frames)) => return Ok(frames),
+            Err(err) => return Err(Error::PortAudio(err)),
+        }
     }
 }
 

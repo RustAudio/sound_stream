@@ -4,6 +4,7 @@
 extern crate portaudio;
 extern crate time;
 
+pub use buffer::AudioBuffer;
 pub use event::SoundStream;
 pub use event::Event;
 pub use settings::Settings;

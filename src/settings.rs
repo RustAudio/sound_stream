@@ -27,7 +27,7 @@ impl Settings {
     pub fn cd_quality() -> Settings {
         Settings {
             sample_hz: 44100,
-            frames: 512,
+            frames: 256,
             channels: 2
         }
     }
