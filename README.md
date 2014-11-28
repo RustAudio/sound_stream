@@ -30,7 +30,7 @@ For more details, see [the example](https://github.com/mitchmindtree/sound_strea
 PortAudio
 ---------
 
-SoundStream requires that you have the PortAudio lib installed on your system. You can download it [here](http://www.portaudio.com/download.html).
+SoundStream requires that you have the PortAudio lib installed on your system. Download it [here](http://www.portaudio.com/download.html).
 
 License
 -------
