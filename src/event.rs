@@ -7,12 +7,16 @@ use error::Error;
 use portaudio::pa;
 use portaudio::pa::Sample;
 use settings::Settings;
+use std::kinds::marker::{
+    ContravariantLifetime,
+    NoCopy,
+};
 use time::precise_time_ns;
 
 pub type DeltaTimeNs = u64;
 
 /// An event to be returned by the SoundStream.
-pub enum Event<'a, B: 'a, I=f32, O=f32> {
+pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
     /// Audio awaits on the stream's input buffer.
     In(Vec<I>, Settings),
     /// The stream's output buffer is ready to be written to.
@@ -29,18 +33,20 @@ pub enum State {
 }
 
 /// An Iterator type for producing Events.
-pub struct SoundStream<B, I=f32, O=f32> where B: AudioBuffer<O>, I: Sample, O: Sample {
+pub struct SoundStream<'a, B, I=f32, O=f32> where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
     prev_state: State,
     last_time: u64,
     stream: pa::Stream<I, O>,
     settings: Settings,
     output_buffer: B,
+    marker: ContravariantLifetime<'a>,
+    marker2: NoCopy,
 }
 
-impl<B, I, O> SoundStream<B, I, O> where B: AudioBuffer<O>, I: Sample, O: Sample {
+impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
 
     /// Constructor for an SoundStream.
-    pub fn new(settings: Settings) -> Result<SoundStream<B, I, O>, Error> {
+    pub fn new(settings: Settings) -> Result<SoundStream<'a, B, I, O>, Error> {
 
         // Initialize PortAudio.
         if let Err(err) = pa::initialize() {
@@ -89,6 +95,7 @@ impl<B, I, O> SoundStream<B, I, O> where B: AudioBuffer<O>, I: Sample, O: Sample
         // Here we construct our PortAudio stream.
         let mut stream = pa::Stream::new();
 
+
         // And now let's kick it off!
         if let Err(err) = stream.open(Some(&input_stream_params),
                                       Some(&output_stream_params),
@@ -104,13 +111,15 @@ impl<B, I, O> SoundStream<B, I, O> where B: AudioBuffer<O>, I: Sample, O: Sample
             stream: stream,
             settings: settings,
             output_buffer: AudioBuffer::zeroed(),
+            marker: ContravariantLifetime,
+            marker2: NoCopy,
         })
     }
 
 }
 
-impl<'a, B, I, O> Iterator<Event<'a, B, I, O>> for SoundStream<B, I, O>
-where B: AudioBuffer<O>, I: Sample, O: Sample {
+impl<'a, B, I, O> Iterator<Event<'a, B, I, O>> for SoundStream<'a, B, I, O>
+where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
     fn next(&mut self) -> Option<Event<'a, B, I, O>> {
 
         // First, determine the new state by checking the previous state.
