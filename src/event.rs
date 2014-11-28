@@ -128,14 +128,12 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
             State::Out => {
                 let output_buffer = self.output_buffer.clone_as_vec();
                 self.output_buffer = AudioBuffer::zeroed();
-                while self.stream.get_stream_write_available() == 0 {}
+                while self.stream.get_stream_write_available() == Ok(None) {}
                 match self.stream.write(output_buffer, self.settings.frames as u32) {
-                    Ok(()) => {
-                        State::Update
-                    },
+                    Ok(()) => State::Update,
                     Err(err) => {
                         println!("Breaking from loop as sound_stream failed to \
-                                 write to the PortAudioStream: {}.", err);
+                                 write to the PortAudio stream: {}.", err);
                         return None
                     },
                 }
@@ -147,14 +145,12 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
         self.prev_state = new_state;
         match new_state {
             State::In => {
-                while self.stream.get_stream_read_available() == 0 {}
+                while self.stream.get_stream_read_available() == Ok(None) {}
                 match self.stream.read(self.settings.frames as u32) {
-                    Ok(input_buffer) => {
-                        Some(Event::In(input_buffer, self.settings))
-                    },
+                    Ok(input_buffer) => Some(Event::In(input_buffer, self.settings)),
                     Err(err) => {
                         println!("Breaking from loop as sound_stream failed to \
-                                 read from the PortAudioStream: {}.", err);
+                                 read from the PortAudio stream: {}.", err);
                         None
                     },
                 }
@@ -170,6 +166,7 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
                 Some(Event::Update(diff_time, self.settings))
             },
         }
+
     }
 }
 
