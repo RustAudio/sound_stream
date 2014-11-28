@@ -18,9 +18,9 @@ const CHANNELS: u16 = 2;
 
 const SETTINGS: Settings = Settings { sample_hz: SAMPLE_HZ, frames: FRAMES, channels: CHANNELS };
 
-pub type OutputBuffer = Vec<f32>;
 pub type Input = f32;
 pub type Output = f32;
+pub type OutputBuffer = Vec<Output>;
 
 fn main() {
 
@@ -36,9 +36,9 @@ fn main() {
     // The SoundStream iterator will automatically return these events in this order.
     for event in stream {
         match event {
-            Event::In(buffer, _settings) => { ::std::mem::replace(&mut cloner, buffer); },
-            Event::Out(buffer, _settings) => *buffer = cloner.clone(),
-            Event::Update(dt, _settings) => println!("update: dt {}", dt),
+            Event::In(buffer) => { ::std::mem::replace(&mut cloner, buffer); },
+            Event::Out(buffer) => *buffer = cloner.clone(),
+            Event::Update(dt) => println!("update: dt {}", dt),
         }
     }
 

@@ -19,11 +19,11 @@ pub type DeltaTimeNs = u64;
 #[deriving(Show)]
 pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
     /// Audio awaits on the stream's input buffer.
-    In(Vec<I>, Settings),
+    In(Vec<I>),
     /// The stream's output buffer is ready to be written to.
-    Out(&'a mut B, Settings),
+    Out(&'a mut B),
     /// Called after handling In and Out.
-    Update(DeltaTimeNs, Settings),
+    Update(DeltaTimeNs),
 }
 
 /// Represents the current state of the SoundStream.
@@ -168,7 +168,7 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
                     return None
                 }
                 match self.stream.read(self.settings.frames as u32) {
-                    Ok(input_buffer) => Some(Event::In(input_buffer, self.settings)),
+                    Ok(input_buffer) => Some(Event::In(input_buffer)),
                     Err(err) => {
                         println!("Breaking from loop as sound_stream failed to \
                                  read from the PortAudio stream: {}.", err);
@@ -189,14 +189,14 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
                 // `.next()` even gets called again.
                 let output_buffer = unsafe { ::std::mem::transmute(buffer) };
 
-                Some(Event::Out(output_buffer, self.settings))
+                Some(Event::Out(output_buffer))
             },
 
             State::Update => {
                 let this_time = precise_time_ns();
                 let diff_time = this_time - self.last_time;
                 self.last_time = this_time;
-                Some(Event::Update(diff_time, self.settings))
+                Some(Event::Update(diff_time))
             },
 
         }
