@@ -46,7 +46,7 @@ pub struct SoundStream<'a, B, I=f32, O=f32> where B: AudioBuffer<O> + 'a, I: Sam
 
 impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
 
-    /// Constructor for an SoundStream.
+    /// Constructor for a SoundStream.
     pub fn new(settings: Settings) -> Result<SoundStream<'a, B, I, O>, Error> {
 
         // Initialize PortAudio.
@@ -110,7 +110,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
 
         Ok(SoundStream {
             prev_state: State::Update,
-            last_time: 0,
+            last_time: precise_time_ns(),
             stream: stream,
             settings: settings,
             output_buffer: AudioBuffer::zeroed((settings.frames * settings.channels) as uint),
