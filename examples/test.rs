@@ -38,7 +38,7 @@ fn main() {
         match event {
             Event::In(buffer) => { ::std::mem::replace(&mut cloner, buffer); },
             Event::Out(buffer) => *buffer = cloner.clone(),
-            Event::Update(dt) => println!("update: dt {}", dt),
+            Event::Update(delta_time_secs) => println!("update: dt {}", delta_time_secs),
         }
     }
 
