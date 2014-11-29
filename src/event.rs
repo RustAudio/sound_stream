@@ -13,7 +13,7 @@ use std::kinds::marker::{
 };
 use time::precise_time_ns;
 
-pub type DeltaTimeNs = u64;
+pub type DeltaTimeSeconds = f64;
 
 /// An event to be returned by the SoundStream.
 #[deriving(Show)]
@@ -23,7 +23,7 @@ pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
     /// The stream's output buffer is ready to be written to.
     Out(&'a mut B),
     /// Called after handling In and Out.
-    Update(DeltaTimeNs),
+    Update(DeltaTimeSeconds),
 }
 
 /// Represents the current state of the SoundStream.
@@ -196,7 +196,9 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
                 let this_time = precise_time_ns();
                 let diff_time = this_time - self.last_time;
                 self.last_time = this_time;
-                Some(Event::Update(diff_time))
+                const BILLION: f64 = 1_000_000_000.0;
+                let diff_time_in_seconds = diff_time as f64 / BILLION;
+                Some(Event::Update(diff_time_in_seconds))
             },
 
         }
