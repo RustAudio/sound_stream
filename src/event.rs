@@ -164,7 +164,7 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
             State::In => {
                 if let Err(err) = wait_for_stream(|| self.stream.get_stream_read_available()) {
                     println!("Breaking from loop as sound_stream failed to \
-                             write to the PortAudio stream: {}.", err);
+                             read from the PortAudio stream: {}.", err);
                     return None
                 }
                 match self.stream.read(self.settings.frames as u32) {
