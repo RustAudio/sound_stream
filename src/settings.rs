@@ -1,6 +1,6 @@
 
 /// Settings required for SoundStream.
-#[deriving(Show, Clone, PartialEq)]
+#[deriving(Show, Copy, Clone, PartialEq)]
 pub struct Settings {
     /// The number of samples per second.
     pub sample_hz: u32,
