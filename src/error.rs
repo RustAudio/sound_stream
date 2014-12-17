@@ -5,7 +5,7 @@
 use portaudio::pa::error::Error as PortAudioError;
 
 /// A type for representing errors in sound_stream.
-#[deriving(Show, Clone)]
+#[deriving(Show, Copy, Clone)]
 pub enum Error {
     /// Errors returned by rust-portaudio.
     PortAudio(PortAudioError),

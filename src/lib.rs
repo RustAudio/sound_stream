@@ -1,5 +1,5 @@
 
-#![feature(default_type_params, if_let, globs, macro_rules, unboxed_closures)]
+#![feature(default_type_params, globs, macro_rules, unboxed_closures)]
 
 extern crate portaudio;
 extern crate time;

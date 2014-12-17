@@ -27,6 +27,7 @@ pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
 }
 
 /// Represents the current state of the SoundStream.
+#[deriving(Copy)]
 pub enum State {
     In,
     Out,
