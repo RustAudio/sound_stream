@@ -45,21 +45,20 @@ macro_rules! impl_audio_buffer(
             fn clone_as_vec(&self) -> Vec<S> { Vec::from_fn($len, |idx| self[idx]) }
         }
     )
-)
+);
 
-
-impl_audio_buffer!(2)
-impl_audio_buffer!(4)
-impl_audio_buffer!(8)
-impl_audio_buffer!(16)
-impl_audio_buffer!(32)
-impl_audio_buffer!(64)
-impl_audio_buffer!(128)
-impl_audio_buffer!(256)
-impl_audio_buffer!(512)
-impl_audio_buffer!(1024)
-impl_audio_buffer!(2048)
-impl_audio_buffer!(4096)
-impl_audio_buffer!(8192)
-impl_audio_buffer!(16384)
+impl_audio_buffer!(2);
+impl_audio_buffer!(4);
+impl_audio_buffer!(8);
+impl_audio_buffer!(16);
+impl_audio_buffer!(32);
+impl_audio_buffer!(64);
+impl_audio_buffer!(128);
+impl_audio_buffer!(256);
+impl_audio_buffer!(512);
+impl_audio_buffer!(1024);
+impl_audio_buffer!(2048);
+impl_audio_buffer!(4096);
+impl_audio_buffer!(8192);
+impl_audio_buffer!(16384);
 
