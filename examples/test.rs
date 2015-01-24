@@ -19,13 +19,12 @@ const CHANNELS: u16 = 2;
 const SETTINGS: Settings = Settings { sample_hz: SAMPLE_HZ, frames: FRAMES, channels: CHANNELS };
 
 pub type Input = f32;
-pub type Output = f32;
-pub type OutputBuffer = Vec<Output>;
+pub type OutputBuffer = Vec<f32>;
 
 fn main() {
 
     // Construct the stream and handle any errors that may have occurred.
-    let mut stream = match SoundStream::<OutputBuffer, Input, Output>::new(SETTINGS) {
+    let mut stream = match SoundStream::<OutputBuffer, Input>::new(SETTINGS) {
         Ok(stream) => stream,
         Err(err) => panic!("An error occurred while constructing SoundStream: {}", err),
     };
