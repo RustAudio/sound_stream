@@ -7,7 +7,7 @@ use error::Error;
 use portaudio::pa;
 use portaudio::pa::Sample;
 use settings::Settings;
-use std::kinds::marker::{
+use std::marker::{
     ContravariantLifetime,
     NoCopy,
 };
@@ -16,8 +16,8 @@ use time::precise_time_ns;
 pub type DeltaTimeSeconds = f64;
 
 /// An event to be returned by the SoundStream.
-#[deriving(Show)]
-pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
+#[derive(Show)]
+pub enum Event<'a, B, I=f32> where B: 'a {
     /// Audio awaits on the stream's input buffer.
     In(Vec<I>),
     /// The stream's output buffer is ready to be written to.
@@ -27,7 +27,7 @@ pub enum Event<'a, B, I=f32, O=f32> where B: 'a {
 }
 
 /// Represents the current state of the SoundStream.
-#[deriving(Copy)]
+#[derive(Copy)]
 pub enum State {
     In,
     Out,
@@ -35,20 +35,20 @@ pub enum State {
 }
 
 /// An Iterator type for producing Events.
-pub struct SoundStream<'a, B, I=f32, O=f32> where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
+pub struct SoundStream<'a, B=Vec<f32>, I=f32> where B: AudioBuffer + 'a, I: Sample {
     prev_state: State,
     last_time: u64,
-    stream: pa::Stream<I, O>,
+    stream: pa::Stream<I, <B as AudioBuffer>::Sample>,
     settings: Settings,
     output_buffer: B,
     marker: ContravariantLifetime<'a>,
     marker2: NoCopy,
 }
 
-impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
+impl<'a, B, I> SoundStream<'a, B, I> where B: AudioBuffer + 'a, I: Sample {
 
     /// Constructor for a SoundStream.
-    pub fn new(settings: Settings) -> Result<SoundStream<'a, B, I, O>, Error> {
+    pub fn new(settings: Settings) -> Result<SoundStream<'a, B, I>, Error> {
 
         // Initialize PortAudio.
         if let Err(err) = pa::initialize() {
@@ -61,7 +61,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
 
         // Determine the sample format for both the input and output.
         let default_input_sample: I = ::std::default::Default::default();
-        let default_output_sample: O = ::std::default::Default::default();
+        let default_output_sample: <B as AudioBuffer>::Sample = ::std::default::Default::default();
         let input_sample_format  = default_input_sample.sample_format();
         let output_sample_format = default_output_sample.sample_format();
 
@@ -114,7 +114,7 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
             last_time: precise_time_ns(),
             stream: stream,
             settings: settings,
-            output_buffer: AudioBuffer::zeroed((settings.frames * settings.channels) as uint),
+            output_buffer: AudioBuffer::zeroed((settings.frames * settings.channels) as usize),
             marker: ContravariantLifetime,
             marker2: NoCopy,
         })
@@ -129,16 +129,17 @@ impl<'a, B, I, O> SoundStream<'a, B, I, O> where B: AudioBuffer<O> + 'a, I: Samp
 
 }
 
-impl<'a, B, I, O> Iterator<Event<'a, B, I, O>> for SoundStream<'a, B, I, O>
-where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
-    fn next(&mut self) -> Option<Event<'a, B, I, O>> {
+impl<'a, B, I> Iterator for SoundStream<'a, B, I>
+where B: AudioBuffer + 'a, I: Sample {
+    type Item = Event<'a, B, I>;
+    fn next(&mut self) -> Option<Event<'a, B, I>> {
 
         // First, determine the new state by checking the previous state.
         let new_state = match self.prev_state {
             State::In => State::Out,
             State::Out => {
                 use std::mem::replace;
-                let len = (self.settings.frames * self.settings.channels) as uint;
+                let len = (self.settings.frames * self.settings.channels) as usize;
                 let output_buffer = replace(&mut self.output_buffer, AudioBuffer::zeroed(len))
                     .clone_as_vec();
                 if let Err(err) = wait_for_stream(|| self.stream.get_stream_write_available()) {
@@ -208,7 +209,8 @@ where B: AudioBuffer<O> + 'a, I: Sample, O: Sample {
 }
 
 /// Wait for the given stream to become ready for reading/writing.
-fn wait_for_stream(f: || -> Result<Option<i64>, pa::Error>) -> Result<i64, Error> {
+fn wait_for_stream<F>(f: F) -> Result<i64, Error>
+where F: Fn() -> Result<Option<i64>, pa::Error> {
     loop {
         match f() {
             Ok(None) => (),

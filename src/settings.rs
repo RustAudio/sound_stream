@@ -1,6 +1,6 @@
 
 /// Settings required for SoundStream.
-#[deriving(Show, Copy, Clone, PartialEq)]
+#[derive(Show, Copy, Clone, PartialEq)]
 pub struct Settings {
     /// The number of samples per second.
     pub sample_hz: u32,
@@ -33,8 +33,8 @@ impl Settings {
     }
 
     /// Return the length of a SoundBuffer that would use Settings.
-    pub fn buffer_size(&self) -> uint {
-        self.frames as uint * self.channels as uint
+    pub fn buffer_size(&self) -> usize {
+        self.frames as usize * self.channels as usize
     }
 
 }
