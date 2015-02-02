@@ -1,1 +1,17 @@
 language: rust
+
+notifications:
+    email:
+        - mitchell.nordine@gmail.com
+
+env:
+    - LD_LIBRARY_PATH=/usr/local/lib
+    - RUST_TEST_TASKS=1
+
+install:
+    - sudo apt-get install libportaudio-dev
+
+script:
+    - cargo build -v
+    - cargo test -v
+    - cargo doc -v
