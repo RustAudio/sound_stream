@@ -1,6 +1,5 @@
 
-SoundStream
-===========
+# SoundStream [![Build Status](https://travis-ci.org/RustAudio/sound_stream.svg?branch=master)](https://travis-ci.org/RustAudio/sound_stream)
 
 A simple-as-possible, *fast* audio I/O stream wrapping PortAudio for Rust! It looks like this:
 
