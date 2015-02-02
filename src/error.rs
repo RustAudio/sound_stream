@@ -5,7 +5,7 @@
 use portaudio::pa::error::Error as PortAudioError;
 
 /// A type for representing errors in sound_stream.
-#[derive(Show, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Error {
     /// Errors returned by rust-portaudio.
     PortAudio(PortAudioError),
@@ -13,7 +13,7 @@ pub enum Error {
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-        self.fmt(f)
+        write!(f, "{:?}", self)
     }
 }
 
