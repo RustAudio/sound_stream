@@ -1,5 +1,5 @@
 
-#![feature(unboxed_closures)]
+#![feature(core, unboxed_closures)]
 
 extern crate portaudio;
 extern crate time;

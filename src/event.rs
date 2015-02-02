@@ -16,7 +16,7 @@ use time::precise_time_ns;
 pub type DeltaTimeSeconds = f64;
 
 /// An event to be returned by the SoundStream.
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Event<'a, B, I=f32> where B: 'a {
     /// Audio awaits on the stream's input buffer.
     In(Vec<I>),
