@@ -4,6 +4,8 @@
 //! In this example we just copy the input buffer straight to the output (beware of feedback).
 //!
 
+#![feature(core)]
+
 extern crate sound_stream;
 
 use sound_stream::{
@@ -32,12 +34,18 @@ fn main() {
     // We'll use this to copy the input buffer straight to the output buffer.
     let mut cloner = Vec::new();
 
+    // We'll use this to count down from 3 seconds before breaking from the loop.
+    let mut count = 3f64;
+
     // The SoundStream iterator will automatically return these events in this order.
-    for event in stream {
+    for event in stream.by_ref() {
         match event {
             Event::In(buffer) => { ::std::mem::replace(&mut cloner, buffer); },
             Event::Out(buffer) => *buffer = cloner.clone(),
-            Event::Update(delta_time_secs) => println!("Update: delta time in seconds {}", delta_time_secs),
+            Event::Update(dt_secs) => {
+                count -= dt_secs;
+                if count < 0.0 { break } else { println!("{}", count) }
+            },
         }
     }
 

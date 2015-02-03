@@ -1,6 +1,5 @@
 language: rust
 notifications:
-    irc: "irc.mozilla.org#piston-internals"
     email:
         - mitchell.nordine@gmail.com
 os:
