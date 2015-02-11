@@ -5,7 +5,8 @@
 use buffer::AudioBuffer;
 use error::Error;
 use portaudio::pa;
-use portaudio::pa::Sample;
+use portaudio::pa::Sample as PaSample;
+use sample::{Sample, Wave};
 use settings::Settings;
 use std::marker::{
     ContravariantLifetime,
@@ -17,7 +18,7 @@ pub type DeltaTimeSeconds = f64;
 
 /// An event to be returned by the SoundStream.
 #[derive(Debug)]
-pub enum Event<'a, B, I=f32> where B: 'a {
+pub enum Event<'a, B, I=Wave> where B: 'a {
     /// Audio awaits on the stream's input buffer.
     In(Vec<I>),
     /// The stream's output buffer is ready to be written to.
@@ -35,7 +36,12 @@ pub enum State {
 }
 
 /// An Iterator type for producing Events.
-pub struct SoundStream<'a, B=Vec<f32>, I=f32> where B: AudioBuffer + 'a, I: Sample {
+pub struct SoundStream<'a, B=Vec<Wave>, I=Wave>
+    where
+        B: AudioBuffer + 'a,
+        <B as AudioBuffer>::Sample: PaSample,
+        I: Sample + PaSample,
+{
     prev_state: State,
     last_time: u64,
     stream: pa::Stream<I, <B as AudioBuffer>::Sample>,
@@ -45,7 +51,12 @@ pub struct SoundStream<'a, B=Vec<f32>, I=f32> where B: AudioBuffer + 'a, I: Samp
     marker2: NoCopy,
 }
 
-impl<'a, B, I> SoundStream<'a, B, I> where B: AudioBuffer + 'a, I: Sample {
+impl<'a, B, I> SoundStream<'a, B, I>
+    where
+        B: AudioBuffer + 'a,
+        <B as AudioBuffer>::Sample: PaSample,
+        I: Sample + PaSample,
+{
 
     /// Constructor for a SoundStream.
     pub fn new(settings: Settings) -> Result<SoundStream<'a, B, I>, Error> {
@@ -130,7 +141,11 @@ impl<'a, B, I> SoundStream<'a, B, I> where B: AudioBuffer + 'a, I: Sample {
 }
 
 impl<'a, B, I> Iterator for SoundStream<'a, B, I>
-where B: AudioBuffer + 'a, I: Sample {
+    where
+        B: AudioBuffer + 'a,
+        <B as AudioBuffer>::Sample: PaSample,
+        I: Sample + PaSample,
+{
     type Item = Event<'a, B, I>;
     fn next(&mut self) -> Option<Event<'a, B, I>> {
 
@@ -210,7 +225,9 @@ where B: AudioBuffer + 'a, I: Sample {
 
 /// Wait for the given stream to become ready for reading/writing.
 fn wait_for_stream<F>(f: F) -> Result<i64, Error>
-where F: Fn() -> Result<Option<i64>, pa::Error> {
+    where
+        F: Fn() -> Result<Option<i64>, pa::Error>,
+{
     loop {
         match f() {
             Ok(None) => (),

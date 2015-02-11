@@ -4,8 +4,6 @@
 //! In this example we just copy the input buffer straight to the output (beware of feedback).
 //!
 
-#![feature(core)]
-
 extern crate sound_stream;
 
 use sound_stream::{
@@ -20,8 +18,9 @@ const CHANNELS: u16 = 2;
 
 const SETTINGS: Settings = Settings { sample_hz: SAMPLE_HZ, frames: FRAMES, channels: CHANNELS };
 
-pub type Input = f32;
-pub type OutputBuffer = Vec<f32>;
+pub type Sample = f32;
+pub type Input = Sample;
+pub type OutputBuffer = Vec<Sample>;
 
 fn main() {
 
@@ -35,7 +34,7 @@ fn main() {
     let mut cloner = Vec::new();
 
     // We'll use this to count down from 3 seconds before breaking from the loop.
-    let mut count = 3f64;
+    let mut count: f64 = 3.0;
 
     // The SoundStream iterator will automatically return these events in this order.
     for event in stream.by_ref() {
