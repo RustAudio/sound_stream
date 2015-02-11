@@ -19,13 +19,12 @@
 //! - [S, ..8192]
 //! - [S, ..16384]
 
-use portaudio::pa::Sample;
-use std::num::FromPrimitive;
+use sample::{Sample, Wave};
 
 /// A trait to be implemented by any Buffer used for audio processing in sound_stream.
 /// This is primarily implemented for fixed-size arrays where len is a power of 2.
 pub trait AudioBuffer {
-    type Sample: Sample = f32;
+    type Sample: Sample = Wave;
     /// Return a Zeroed AudioBuffer.
     fn zeroed(len: usize) -> Self;
     /// Clone the AudioBuffer as a Vec.
@@ -34,8 +33,8 @@ pub trait AudioBuffer {
 
 impl<S> AudioBuffer for Vec<S> where S: Sample {
     type Sample = S;
-    fn zeroed(len: usize) -> Vec<S> { 
-        (0..len).map(|_| FromPrimitive::from_u64(0).unwrap()).collect()
+    fn zeroed(len: usize) -> Vec<S> {
+        (0..len).map(|_| Sample::zero()).collect()
     }
     fn clone_as_vec(&self) -> Vec<S> { self.clone() }
 }
@@ -46,9 +45,9 @@ macro_rules! impl_audio_buffer(
         impl<S> AudioBuffer for [S; $len] where S: Sample {
             type Sample = S;
             #[inline]
-            fn zeroed(_len: usize) -> [S; $len] { [FromPrimitive::from_u64(0).unwrap(); $len] }
+            fn zeroed(_len: usize) -> [S; $len] { [Sample::zero(); $len] }
             #[inline]
-            fn clone_as_vec(&self) -> Vec<S> { (0us..$len).map(|idx| self[idx]).collect() }
+            fn clone_as_vec(&self) -> Vec<S> { (0..$len).map(|idx| self[idx]).collect() }
         }
     )
 );
