@@ -13,3 +13,5 @@ git = "https://github.com/jeremyletang/rust-portaudio"
 [dependencies.time]
 git = "https://github.com/rust-lang/time"
 
+[dependencies.sample]
+git = "https://github.com/RustAudio/sample"
