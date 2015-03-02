@@ -8,10 +8,7 @@ use portaudio::pa;
 use portaudio::pa::Sample as PaSample;
 use sample::{Sample, Wave};
 use settings::Settings;
-use std::marker::{
-    ContravariantLifetime,
-    NoCopy,
-};
+use std::marker::{PhantomData, NoCopy};
 use time::precise_time_ns;
 
 pub type DeltaTimeSeconds = f64;
@@ -47,7 +44,7 @@ pub struct SoundStream<'a, B=Vec<Wave>, I=Wave>
     stream: pa::Stream<I, <B as AudioBuffer>::Sample>,
     settings: Settings,
     output_buffer: B,
-    marker: ContravariantLifetime<'a>,
+    marker: PhantomData<&'a ()>,
     marker2: NoCopy,
 }
 
@@ -126,7 +123,7 @@ impl<'a, B, I> SoundStream<'a, B, I>
             stream: stream,
             settings: settings,
             output_buffer: AudioBuffer::zeroed((settings.frames * settings.channels) as usize),
-            marker: ContravariantLifetime,
+            marker: PhantomData,
             marker2: NoCopy,
         })
     }
