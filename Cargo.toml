@@ -1,13 +1,17 @@
 [package]
 
 name = "sound_stream"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
+description = "Provides a simple interface to the default audio input and output device streams on a user's system."
+readme = "README.md"
+keywords = ["audio", "dsp", "io", "music", "stream"]
+license = "MIT"
+repository = "https://github.com/RustAudio/sound_stream.git"
+homepage = "https://github.com/RustAudio/sound_stream"
 
-[dependencies.rust-portaudio]
-git = "https://github.com/jeremyletang/rust-portaudio"
 
 [dependencies]
-# portaudio = "*"
+portaudio = "*"
 sample = "*"
 time = "*"
