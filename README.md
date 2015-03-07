@@ -7,7 +7,7 @@ A simple-as-possible, *fast* audio I/O stream wrapping PortAudio for Rust! It lo
 for event in stream.by_ref() {
     match event {
         Event::In(input_buffer) => println!("Incoming audio!"),
-        Event::Out(output_buffer) => println!("Time to write to output!"),
+        Event::Out(output_buffer, settings) => println!("Time to write to output!"),
         Event::Update(delta_time) => println!("Updatey stuff here."),
     }
 }
