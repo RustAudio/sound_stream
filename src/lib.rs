@@ -1,5 +1,5 @@
 
-#![feature(collections, core, unboxed_closures, unsafe_destructor)]
+#![feature(collections, unboxed_closures, unsafe_destructor)]
 
 extern crate portaudio;
 extern crate sample;
