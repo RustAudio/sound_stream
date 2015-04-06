@@ -12,6 +12,7 @@ homepage = "https://github.com/RustAudio/sound_stream"
 
 
 [dependencies]
+num = "*"
 portaudio = "*"
 sample = "*"
 time = "*"

@@ -24,7 +24,7 @@ pub enum Event<'a, I=Wave, O=Wave> where O: 'a {
 }
 
 /// Represents the current state of the SoundStream.
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum State {
     In,
     Out,
@@ -101,7 +101,7 @@ impl<'a, I, O> SoundStreamBuilder<'a, I, O>
             UpdateFrequency::Frames(frames) => frames,
             UpdateFrequency::PerBuffer(n) => stream_settings.frames / n,
             UpdateFrequency::Hz(hz) => {
-                use std::num::Float;
+                use num::Float;
                 let buffer_hz = stream_settings.sample_hz as f32 / stream_settings.frames as f32;
                 let updates_per_buffer = hz / buffer_hz;
                 (stream_settings.frames as f32 / updates_per_buffer).round() as u16
