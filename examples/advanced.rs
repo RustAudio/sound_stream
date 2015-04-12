@@ -6,8 +6,6 @@
 //! while taking into account the unique update rate. Beware of speaker/mic feedback!
 //!
 
-#![feature(collections)]
-
 extern crate sound_stream;
 
 use sound_stream::{Event, Settings, SoundStream};
@@ -60,9 +58,21 @@ fn main() {
                 intermediate.extend(buffer.into_iter());
             },
             Event::Out(buffer, settings) => {
-                let remaining = intermediate.split_off(settings.buffer_size());
+
+                let buffer_size = settings.buffer_size();
+                let remaining = intermediate[buffer_size..].iter().map(|&sample| sample).collect();
+                intermediate.truncate(buffer_size);
                 let samples = ::std::mem::replace(&mut intermediate, remaining);
-                buffer.clone_from_slice(&samples[..]);
+                for (output_sample, sample) in buffer.iter_mut().zip(samples.into_iter()) {
+                    *output_sample = sample;
+                }
+
+                // NOTE: The above will be replaced by the following once `split_off` and
+                // `clone_from_slice` are stablilised.
+                // let remaining = intermediate.split_off(settings.buffer_size());
+                // let samples = ::std::mem::replace(&mut intermediate, remaining);
+                // buffer.clone_from_slice(&samples[..]);
+
             },
             Event::Update(dt_secs) => {
                 count -= dt_secs;

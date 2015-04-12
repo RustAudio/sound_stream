@@ -1,6 +1,5 @@
 
-#![feature(collections, unboxed_closures, unsafe_destructor)]
-
+extern crate num;
 extern crate portaudio;
 extern crate sample;
 extern crate time;
