@@ -234,7 +234,6 @@ impl<'a, I, O> SoundStream<'a, I, O>
 
 }
 
-#[unsafe_destructor]
 impl<'a, I, O> Drop for SoundStream<'a, I, O>
     where
         I: Sample + PaSample,
@@ -274,7 +273,14 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
                 let target_buffer_size = stream_settings.buffer_size();
                 let samples_needed = target_buffer_size - output_buffer.len();
                 let extension_amount = min(samples_needed, update_buffer.len());
-                let update_remaining = update_buffer.split_off(extension_amount);
+
+                //let update_remaining = update_buffer.split_off(extension_amount);
+                // NOTE: The following four lines should be replaced by `split_off` once stabilised.
+                let update_remaining = update_buffer[extension_amount..].iter()
+                    .map(|&sample| sample)
+                    .collect();
+                update_buffer.truncate(extension_amount);
+
                 let buffer_extension = replace(update_buffer, update_remaining);
                 output_buffer.extend(buffer_extension.into_iter());
 
