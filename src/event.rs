@@ -164,7 +164,8 @@ impl<'a, I, O> SoundStreamBuilder<'a, I, O>
                                       Some(&output_stream_params),
                                       stream_settings.sample_hz as f64,
                                       stream_settings.frames as u32,
-                                      pa::StreamFlags::ClipOff) {
+                                      pa::StreamFlags::ClipOff,
+                                      None) {
             return Err(Error::PortAudio(err))
         }
 
