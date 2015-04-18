@@ -376,12 +376,15 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
 /// Wait for the given stream to become ready for reading/writing.
 fn wait_for_stream<F>(f: F) -> Result<i64, Error>
     where
-        F: Fn() -> Result<Option<i64>, pa::Error>,
+        F: Fn() -> Result<pa::StreamAvailable, pa::Error>,
 {
     loop {
         match f() {
-            Ok(None) => (),
-            Ok(Some(frames)) => return Ok(frames),
+            Ok(available) => match available {
+                pa::StreamAvailable::Frames(frames) => return Ok(frames),
+                pa::StreamAvailable::InputOverflowed => println!("Input stream has overflowed"),
+                pa::StreamAvailable::OutputUnderflowed => println!("Output stream has underflowed"),
+            },
             Err(err) => return Err(Error::PortAudio(err)),
         }
     }

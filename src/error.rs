@@ -26,3 +26,12 @@ impl ::std::error::Error for Error {
     }
 }
 
+// /// A type for indicating what to do on the occurence of an error.
+// #[derive(Debug, Copy, Clone)]
+// pub enum Action {
+//     /// Break from the portaudio stream loop.
+//     Break,
+//     /// Ignore the error and continue the stream loop.
+//     Ignore,
+// }
+
