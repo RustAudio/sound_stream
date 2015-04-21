@@ -1,4 +1,4 @@
-//! 
+//!
 //! The SoundStream is an Iterator based interpretation of the PortAudio sound stream.
 //!
 
@@ -294,7 +294,7 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
                         return None
                     }
                     match stream.write(stream_buffer, stream_settings.frames as u32) {
-                        Ok(()) => State::Update,
+                        Ok(_) => State::Update,
                         Err(err) => {
                             println!("Breaking from loop as sound_stream failed to \
                                      write to the PortAudio stream: {}.", err);
@@ -302,7 +302,7 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
                         },
                     }
                 }
-                
+
                 // Otherwise, we still need to collect more samples!
                 else {
                     State::Update
@@ -316,7 +316,7 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
             None => State::In,
         };
 
-        // Prepare the next event in accordance with the new state. 
+        // Prepare the next event in accordance with the new state.
         self.prev_state = Some(new_state);
         match new_state {
 
@@ -389,4 +389,3 @@ fn wait_for_stream<F>(f: F) -> Result<i64, Error>
         }
     }
 }
-
