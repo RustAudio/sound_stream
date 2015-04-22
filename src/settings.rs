@@ -1,21 +1,25 @@
 
+pub type SampleHz = u32;
+pub type Frames = u16;
+pub type Channels = u16;
+
 /// Settings required for SoundStream.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Settings {
     /// The number of samples per second.
-    pub sample_hz: u32,
+    pub sample_hz: SampleHz,
     /// How many samples per channel requested at a time in the buffer.
     /// The more frames, the less likely to make glitches,
     /// but this gives slower response.
-    pub frames: u16,
+    pub frames: Frames,
     /// Number of channels, for example 2 for stereo sound (left + right speaker).
-    pub channels: u16
+    pub channels: Channels,
 }
 
 impl Settings {
 
     /// Custom constructor for the Settings.
-    pub fn new(sample_hz: u32, frames: u16, channels: u16) -> Settings {
+    pub fn new(sample_hz: SampleHz, frames: Frames, channels: Channels) -> Settings {
         Settings {
             sample_hz: sample_hz,
             frames: frames,

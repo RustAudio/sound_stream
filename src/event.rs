@@ -6,17 +6,18 @@ use error::Error;
 use portaudio::pa;
 use portaudio::pa::Sample as PaSample;
 use sample::{Sample, Wave};
-use settings::Settings;
+use settings::{Settings, Frames};
 use std::marker::PhantomData;
 use time::precise_time_ns;
 
+/// Difference in time between Update events.
 pub type DeltaTimeSeconds = f64;
 
 /// An event to be returned by the SoundStream.
 #[derive(Debug)]
 pub enum Event<'a, I=Wave, O=Wave> where O: 'a {
     /// Audio awaits on the stream's input buffer.
-    In(Vec<I>),
+    In(Vec<I>, Settings),
     /// The stream's output buffer is ready to be written to.
     Out(&'a mut [O], Settings),
     /// Called after handling In and Out.
@@ -25,7 +26,7 @@ pub enum Event<'a, I=Wave, O=Wave> where O: 'a {
 
 /// Represents the current state of the SoundStream.
 #[derive(Clone, Copy)]
-pub enum State {
+pub enum NextEvent {
     In,
     Out,
     Update,
@@ -104,7 +105,7 @@ impl<'a, I, O> SoundStreamBuilder<'a, I, O>
                 use num::Float;
                 let buffer_hz = stream_settings.sample_hz as f32 / stream_settings.frames as f32;
                 let updates_per_buffer = hz / buffer_hz;
-                (stream_settings.frames as f32 / updates_per_buffer).round() as u16
+                (stream_settings.frames as f32 / updates_per_buffer).round() as Frames
             },
         };
 
@@ -178,8 +179,8 @@ impl<'a, I, O> SoundStreamBuilder<'a, I, O>
             update_settings: update_settings,
             last_time: precise_time_ns(),
             output_buffer: Vec::with_capacity(stream_settings.buffer_size()),
-            update_buffer: Vec::with_capacity(update_settings.buffer_size()),
-            prev_state: None,
+            input_buffer: Vec::with_capacity(stream_settings.buffer_size()),
+            next_event: NextEvent::In,
             stream: stream,
             stream_settings: stream_settings,
             marker: PhantomData,
@@ -197,14 +198,20 @@ pub struct SoundStream<'a, I=Wave, O=Wave>
         O: Sample + PaSample,
 {
     last_time: u64,
+    /// Requested stream format.
     stream_settings: Settings,
-    output_buffer: Vec<O>,
+    /// Contains a description of the stream format with the target update rate.
     update_settings: Settings,
-    update_buffer: Vec<O>,
-    prev_state: Option<State>,
+    /// Store samples in this until there is enough to write to the output stream.
+    output_buffer: Vec<O>,
+    /// Buffer the samples from the input until its length is equal to the buffer_length.
+    input_buffer: Vec<I>,
+    /// The next event that will occur.
+    next_event: NextEvent,
+    /// The port audio stream.
     stream: pa::Stream<I, O>,
-    marker: PhantomData<&'a ()>,
     is_closed: bool,
+    marker: PhantomData<&'a ()>,
 }
 
 impl<'a, I, O> SoundStream<'a, I, O>
@@ -258,130 +265,141 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
 
     fn next(&mut self) -> Option<Event<'a, I, O>> {
 
-        // First, determine the new state by checking the previous state.
-        let new_state = match self.prev_state {
-            Some(State::In) => State::Out,
-            Some(State::Out) => {
-                use std::cmp::min;
-                use std::mem::replace;
-                let SoundStream {
-                    ref mut output_buffer,
-                    ref mut update_buffer,
-                    ref stream_settings,
-                    ref mut stream,
-                    ..
-                } = *self;
-                let target_buffer_size = stream_settings.buffer_size();
-                let samples_needed = target_buffer_size - output_buffer.len();
-                let extension_amount = min(samples_needed, update_buffer.len());
+        let SoundStream {
+            ref mut stream,
+            ref mut input_buffer,
+            ref mut output_buffer,
+            ref mut next_event,
+            ref stream_settings,
+            ref update_settings,
+            ref mut last_time,
+            ..
+        } = *self;
 
-                //let update_remaining = update_buffer.split_off(extension_amount);
-                // NOTE: The following four lines should be replaced by `split_off` once stabilised.
-                let update_remaining = update_buffer[extension_amount..].iter()
-                    .map(|&sample| sample)
-                    .collect();
-                update_buffer.truncate(extension_amount);
+        loop {
+            use std::error::Error as StdError;
+            use std::mem::replace;
 
-                let buffer_extension = replace(update_buffer, update_remaining);
-                output_buffer.extend(buffer_extension.into_iter());
+            // How many frames are available on the input stream?
+            let available_in_frames = match wait_for_stream(|| stream.get_stream_read_available()) {
+                Ok(frames) => frames,
+                Err(err) => {
+                    println!("An error occurred while requesting the number of available \
+                             frames for reading from the input stream: {}. SoundStream will \
+                             now exit the event loop.", StdError::description(&err));
+                    return None;
+                },
+            };
 
-                // If the output_buffer is the length of the target size it is ready for the stream.
-                if output_buffer.len() == target_buffer_size {
-                    let stream_buffer = replace(output_buffer, Vec::with_capacity(target_buffer_size));
-                    if let Err(err) = wait_for_stream(|| stream.get_stream_write_available()) {
-                        println!("Breaking from loop as sound_stream failed to \
-                                 write to the PortAudio stream: {}.", err);
-                        return None
-                    }
-                    match stream.write(stream_buffer, stream_settings.frames as u32) {
-                        Ok(_) => State::Update,
-                        Err(err) => {
-                            println!("Breaking from loop as sound_stream failed to \
-                                     write to the PortAudio stream: {}.", err);
-                            return None
-                        },
-                    }
-                }
-
-                // Otherwise, we still need to collect more samples!
-                else {
-                    State::Update
-                }
-            },
-            Some(State::Update) => {
-                let target_buffer_size = self.stream_settings.buffer_size();
-                let next_buffer_size = self.output_buffer.len() + self.update_settings.buffer_size();
-                if next_buffer_size < target_buffer_size { State::Out } else { State::In }
-            },
-            None => State::In,
-        };
-
-        // Prepare the next event in accordance with the new state.
-        self.prev_state = Some(new_state);
-        match new_state {
-
-            State::In => {
-                let SoundStream { ref mut stream, ref stream_settings, .. } = *self;
-                if let Err(err) = wait_for_stream(|| stream.get_stream_read_available()) {
-                    println!("Breaking from loop as sound_stream failed to \
-                             read from the PortAudio stream: {}.", err);
-                    return None
-                }
-                match stream.read(stream_settings.frames as u32) {
-                    Ok(input_buffer) => Some(Event::In(input_buffer)),
+            // If there are frames available, let's take them and add them to our input_buffer.
+            if available_in_frames > 0 {
+                match stream.read(available_in_frames) {
+                    Ok(input_samples) => input_buffer.extend(input_samples.into_iter()),
                     Err(err) => {
-                        println!("Breaking from loop as sound_stream failed to \
-                                 read from the PortAudio stream: {}.", err);
-                        None
+                        println!("An error occurred while reading from the input stream: {}. \
+                                 SoundStream will now exit the event loop.",
+                                 StdError::description(&err));
+                        return None;
                     },
                 }
-            },
+            }
 
-            State::Out => {
-                use std::iter::repeat;
-                let SoundStream { ref mut update_buffer, ref update_settings, .. } = *self;
+            // How many frames are available for writing on the output stream?
+            let available_out_frames = match wait_for_stream(|| stream.get_stream_write_available()) {
+                Ok(frames) => frames,
+                Err(err) => {
+                    println!("An error occurred while requesting the number of available \
+                             frames for writing from the output stream: {}. SoundStream will \
+                             now exit the event loop.", StdError::description(&err));
+                    return None;
+                },
+            };
 
-                // Start the slice just after the already filled samples.
-                let start = update_buffer.len();
+            // How many frames do we have in our output_buffer so far?
+            let output_buffer_frames = (output_buffer.len() / stream_settings.channels as usize) as u32;
 
-                // Extend the update buffer by the necessary number of frames.
-                update_buffer.extend(repeat(Sample::zero()).take(update_settings.buffer_size()));
+            // If there are frames available for writing and we have some to write, then write!
+            if available_out_frames > 0 && output_buffer_frames > 0 {
+                // If we have more than enough frames for writing, take them from the start of the buffer.
+                let (write_buffer, write_frames) = if output_buffer_frames >= available_out_frames {
+                    let out_samples = (available_out_frames * stream_settings.channels as u32) as usize;
+                    let remaining = output_buffer[out_samples..].iter().map(|&sample| sample).collect();
+                    output_buffer.truncate(out_samples);
+                    let write_buffer = replace(output_buffer, remaining);
+                    (write_buffer, available_out_frames)
+                }
+                // Otherwise if we have less, just take what we can for now.
+                else {
+                    let write_buffer = replace(output_buffer, Vec::with_capacity(stream_settings.buffer_size()));
+                    (write_buffer, output_buffer_frames)
+                };
+                if let Err(err) = stream.write(write_buffer, write_frames) {
+                    println!("An error occurred while writing to the output stream: {}. \
+                             SoundStream will now exit the event loop.",
+                             StdError::description(&err));
+                    return None
+                }
+            }
 
-                // Here we obtain a mutable reference to the slice with the correct lifetime so
-                // that we can return it via our `Event::Out`. Note: This means that a twisted,
-                // evil person could do horrific things with this iterator by calling `.next()`
-                // multiple times and storing aliasing mutable references to our output buffer,
-                // HOWEVER - this is extremely unlikely to occur in practise as the api is designed
-                // in a way that the reference is intended to die at the end of each loop before
-                // `.next()` even gets called again.
-                let slice = unsafe { ::std::mem::transmute(&mut update_buffer[start..]) };
-
-                Some(Event::Out(slice, *update_settings))
-            },
-
-            State::Update => {
-                let this_time = precise_time_ns();
-                let diff_time = this_time - self.last_time;
-                self.last_time = this_time;
-                const BILLION: f64 = 1_000_000_000.0;
-                let diff_time_in_seconds = diff_time as f64 / BILLION;
-                Some(Event::Update(diff_time_in_seconds))
-            },
+            match *next_event {
+                NextEvent::In => {
+                    let target_samples = update_settings.buffer_size();
+                    // Once we have enough samples to create an input event, do so.
+                    if input_buffer.len() >= target_samples {
+                        let remaining = input_buffer[target_samples..].iter()
+                            .map(|&sample| sample).collect();
+                        input_buffer.truncate(target_samples);
+                        let buffer = replace(input_buffer, remaining);
+                        *next_event = NextEvent::Out;
+                        return Some(Event::In(buffer, *update_settings))
+                    }
+                },
+                NextEvent::Out => {
+                    // Don't let the output_buffer fill any higher than the given stream_settings.
+                    if output_buffer.len() <= stream_settings.buffer_size() {
+                        use std::iter::repeat;
+                        // Start the slice just after the already filled samples.
+                        let start = output_buffer.len();
+                        // Extend the update buffer by the necessary number of frames.
+                        output_buffer.extend(repeat(Sample::zero()).take(update_settings.buffer_size()));
+                        // Here we obtain a mutable reference to the slice with the correct lifetime so
+                        // that we can return it via our `Event::Out`. Note: This means that a twisted,
+                        // evil person could do horrific things with this iterator by calling `.next()`
+                        // multiple times and storing aliasing mutable references to our output buffer,
+                        // HOWEVER - this is extremely unlikely to occur in practise as the api is designed
+                        // in a way that the reference is intended to die at the end of each loop before
+                        // `.next()` even gets called again.
+                        let slice = unsafe { ::std::mem::transmute(&mut output_buffer[start..]) };
+                        *next_event = NextEvent::Update;
+                        return Some(Event::Out(slice, *update_settings))
+                    }
+                },
+                NextEvent::Update => {
+                    let this_time = precise_time_ns();
+                    let diff_time = this_time - *last_time;
+                    *last_time = this_time;
+                    const BILLION: f64 = 1_000_000_000.0;
+                    let diff_time_in_seconds = diff_time as f64 / BILLION;
+                    *next_event = NextEvent::In;
+                    return Some(Event::Update(diff_time_in_seconds))
+                },
+            }
 
         }
 
     }
+
 }
 
 /// Wait for the given stream to become ready for reading/writing.
-fn wait_for_stream<F>(f: F) -> Result<i64, Error>
+fn wait_for_stream<F>(f: F) -> Result<u32, Error>
     where
         F: Fn() -> Result<pa::StreamAvailable, pa::Error>,
 {
     loop {
         match f() {
             Ok(available) => match available {
-                pa::StreamAvailable::Frames(frames) => return Ok(frames),
+                pa::StreamAvailable::Frames(frames) => return Ok(frames as u32),
                 pa::StreamAvailable::InputOverflowed => println!("Input stream has overflowed"),
                 pa::StreamAvailable::OutputUnderflowed => println!("Output stream has underflowed"),
             },

@@ -40,39 +40,14 @@ fn main() {
     // We'll use this to count down from 3 seconds before breaking from the loop.
     let mut count: f64 = 3.0;
 
-    // The SoundStream iterator will automatically return each event in the correct order,
-    // where the first three events will always be `In`, `Out` and then `Update`.
-    //
-    // The following order is determined by the given update rate. The update rate determines
-    // the size of the `Out` buffer in frames, where the number of frames is as close as possible
-    // in duration to the update rate given.
-    //
-    // The `Out` and `Update` events are called as fast as possible and the samples are stored
-    // until the next `Out` would give `n` number of frames where `n >= FRAMES`. At this point the
-    // stream will return an `In` event before continuing the cycle. The first `Out` event of the
-    // next cycle would collect the final frames needed for sending to the output device. If more
-    // frames are collected than is needed, the remaining frames will be stored for the next buffer.
+    // The SoundStream iterator will automatically return these events in this order,
     for event in stream.by_ref() {
         match event {
-            Event::In(buffer) => {
-                intermediate.extend(buffer.into_iter());
-            },
-            Event::Out(buffer, settings) => {
-
-                let buffer_size = settings.buffer_size();
-                let remaining = intermediate[buffer_size..].iter().map(|&sample| sample).collect();
-                intermediate.truncate(buffer_size);
-                let samples = ::std::mem::replace(&mut intermediate, remaining);
-                for (output_sample, sample) in buffer.iter_mut().zip(samples.into_iter()) {
-                    *output_sample = sample;
+            Event::In(buffer, _) => { ::std::mem::replace(&mut intermediate, buffer); },
+            Event::Out(buffer, _) => {
+                for (output_sample, sample) in buffer.iter_mut().zip(intermediate.iter()) {
+                    *output_sample = *sample;
                 }
-
-                // NOTE: The above will be replaced by the following once `split_off` and
-                // `clone_from_slice` are stablilised.
-                // let remaining = intermediate.split_off(settings.buffer_size());
-                // let samples = ::std::mem::replace(&mut intermediate, remaining);
-                // buffer.clone_from_slice(&samples[..]);
-
             },
             Event::Update(dt_secs) => {
                 count -= dt_secs;
