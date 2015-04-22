@@ -8,7 +8,7 @@ use portaudio::pa::Sample as PaSample;
 use sample::{Sample, Wave};
 use settings::{Settings, Frames};
 use std::marker::PhantomData;
-use time::precise_time_ns;
+use time::SteadyTime;
 
 /// Difference in time between Update events.
 pub type DeltaTimeSeconds = f64;
@@ -177,7 +177,7 @@ impl<'a, I, O> SoundStreamBuilder<'a, I, O>
 
         Ok(SoundStream {
             update_settings: update_settings,
-            last_time: precise_time_ns(),
+            last_time: SteadyTime::now().0,
             output_buffer: Vec::with_capacity(stream_settings.buffer_size()),
             input_buffer: Vec::with_capacity(stream_settings.buffer_size()),
             next_event: NextEvent::In,
@@ -374,7 +374,7 @@ impl<'a, I, O> Iterator for SoundStream<'a, I, O>
                     }
                 },
                 NextEvent::Update => {
-                    let this_time = precise_time_ns();
+                    let this_time = SteadTime::now().0;
                     let diff_time = this_time - *last_time;
                     *last_time = this_time;
                     const BILLION: f64 = 1_000_000_000.0;
