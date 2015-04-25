@@ -4,13 +4,21 @@
 A simple-as-possible, *fast* audio I/O stream wrapping PortAudio for Rust! It looks like this:
 
 ```Rust
-for event in stream.by_ref() {
-    match event {
-        Event::In(input_buffer) => println!("Incoming audio!"),
-        Event::Out(output_buffer, settings) => println!("Time to write to output!"),
-        Event::Update(delta_time) => println!("Updatey stuff here."),
+// The callback we'll use to pass to the Stream. It will write the input directly to the output.
+let f = Box::new(move |input: &[f32], _: Settings,
+                       output: &mut[f32], _: Settings,
+                       dt: f64, _: CallbackFlags| {
+    for (output_sample, input_sample) in o.iter_mut().zip(i.iter()) {
+        *output_sample = *input_sample;
     }
-}
+    CallbackResult::Continue
+});
+
+// Run our callback on the default, duplex, non-blocking stream.
+let stream = SoundStream::new()
+    .duplex(StreamParams::new(), StreamParams::new())
+    .run_callback(f)
+    .unwrap();
 ```
 
 
