@@ -39,7 +39,7 @@ enum BufferFrequency {
 pub type DeltaTimeSeconds = f64;
 
 /// To be returned by the callback that is run by the non-blocking streams.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CallbackResult {
     /// Successfully finish and close the stream.
     Complete,
