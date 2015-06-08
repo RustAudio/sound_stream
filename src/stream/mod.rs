@@ -15,6 +15,7 @@ pub mod output;
 pub const MINIMUM_BUFFER_RESERVATION: usize = 2048;
 
 /// A builder context for a SoundStream.
+#[derive(Clone, PartialEq)]
 pub struct SoundStream {
     maybe_buffer_frequency: Option<BufferFrequency>,
     maybe_sample_hz: Option<f64>,
@@ -28,6 +29,7 @@ pub type StreamFlags = pa::StreamFlags;
 pub type CallbackFlags = pa::StreamCallbackFlags;
 
 /// Represents the update frequency.
+#[derive(Copy, Clone, PartialEq)]
 enum BufferFrequency {
     Hz(f32),
     Frames(Frames),
@@ -37,7 +39,7 @@ enum BufferFrequency {
 pub type DeltaTimeSeconds = f64;
 
 /// To be returned by the callback that is run by the non-blocking streams.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CallbackResult {
     /// Successfully finish and close the stream.
     Complete,
@@ -57,10 +59,10 @@ pub type Idx = pa::DeviceIndex;
 pub type Latency = pa::Time;
 
 /// A type for building stream parameters.
+#[derive(Copy, Clone, PartialEq)]
 pub struct StreamParams<S> {
     pub idx: Option<Idx>,
     pub channel_count: Option<i32>,
-    pub sample_format: Option<SampleFormat>,
     pub suggested_latency: Option<Latency>,
     pub phantom_sample: PhantomData<S>,
 }
@@ -146,7 +148,6 @@ impl<S> StreamParams<S> {
         StreamParams {
             idx: None,
             channel_count: None,
-            sample_format: None,
             suggested_latency: None,
             phantom_sample: PhantomData,
         }
