@@ -168,8 +168,7 @@ impl<S> StreamParams<S> {
     /// Return the sample format for the Stream.
     #[inline]
     pub fn sample_format(&self) -> pa::SampleFormat where S: pa::Sample {
-        let s: S = ::std::default::Default::default();
-        pa::Sample::sample_format(&s)
+        S::sample_format_for::<S>()
     }
 
     /// Suggest a latency to use for the stream.
