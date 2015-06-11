@@ -437,7 +437,7 @@ impl<'a, I, O> Iterator for BlockingStream<'a, I, O>
                 // Start the slice just after the already filled samples.
                 let start = user_buffer.len();
                 // Extend the update buffer by the necessary number of frames.
-                user_buffer.extend(repeat(Sample::zero()).take(output_settings.buffer_size()));
+                user_buffer.extend(repeat(O::zero()).take(output_settings.buffer_size()));
                 // Here we obtain a mutable reference to the slice with the correct lifetime so
                 // that we can return it via our `Event::Out`. Note: This means that a twisted,
                 // evil person could do horrific things with this iterator by calling `.next()`
