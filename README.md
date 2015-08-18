@@ -32,7 +32,7 @@ Add sound_stream to your Cargo.toml dependencies like so:
 sound_stream = "*"
 ```
 
-For more details, see [the example](https://github.com/RustAudio/sound_stream/blob/master/examples/test.rs).
+For more details, see the [examples](https://github.com/RustAudio/sound_stream/tree/master/examples).
 
 PortAudio
 ---------
