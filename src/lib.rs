@@ -1,11 +1,15 @@
 
 extern crate num;
-extern crate portaudio;
+extern crate portaudio as portaudio_lib;
 extern crate sample;
 extern crate time;
 
+
+pub use portaudio_lib as portaudio;
+
 pub use error::Error;
 pub use portaudio::pa::Sample as PaSample;
+pub use portaudio::pa::Stream as PaStream;
 pub use sample::{Amplitude, Sample, Wave};
 pub use settings::{Settings, SampleHz, Frames, Channels};
 pub use stream::Idx as DeviceIdx;
