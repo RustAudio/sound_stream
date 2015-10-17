@@ -57,6 +57,7 @@ pub struct BlockingStream<'a, I=Wave, O=Wave>
     marker: PhantomData<&'a ()>,
 }
 
+
 /// Stream callback function type.
 pub type Callback<I, O> =
     Box<FnMut(&[I], Settings, &mut[O], Settings, DeltaTimeSeconds, CallbackFlags) -> CallbackResult>;
@@ -168,7 +169,7 @@ impl<I, O> Builder<I, O>
         Ok((flags, input_params, output_params, sample_hz, frames))
     }
 
-    /// Launch a non-blocking dubplex stream with the given callback!
+    /// Launch a non-blocking duplex stream with the given callback!
     #[inline]
     pub fn run_callback(self, mut callback: Callback<I, O>) -> Result<NonBlockingStream<I, O>, Error> {
 
