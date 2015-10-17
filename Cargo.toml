@@ -13,6 +13,6 @@ homepage = "https://github.com/RustAudio/sound_stream"
 
 [dependencies]
 num = { version = "0.1.27", default-features = false }
-portaudio = "0.4.17"
+portaudio = "0.4.19"
 sample = "0.2.0"
 time = "0.1.32"
