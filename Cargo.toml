@@ -1,7 +1,7 @@
 [package]
 
 name = "sound_stream"
-version = "0.4.4"
+version = "0.5.0"
 authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
 description = "Provides a simple interface to the default audio input and output device streams on a user's system."
 readme = "README.md"
@@ -12,7 +12,7 @@ homepage = "https://github.com/RustAudio/sound_stream"
 
 
 [dependencies]
-num = { version = "*", default-features = false }
-portaudio = "*"
-sample = "*"
-time = "*"
+num = { version = "0.1.27", default-features = false }
+portaudio = "0.4.17"
+sample = "0.2.0"
+time = "0.1.32"
