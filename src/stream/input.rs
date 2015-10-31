@@ -109,7 +109,9 @@ impl<I> Builder<I> where I: Sample + PaSample {
 
     /// Launch a non-blocking input stream with the given callback!
     #[inline]
-    pub fn run_callback(self, mut callback: Callback<I>) -> Result<NonBlockingStream<I>, Error> {
+    pub fn run_callback(self, mut callback: Callback<I>) -> Result<NonBlockingStream<I>, Error>
+        where I: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
@@ -128,7 +130,8 @@ impl<I> Builder<I> where I: Sample + PaSample {
                                _output: &mut[I],
                                frames: u32,
                                time_info: &pa::StreamCallbackTimeInfo,
-                               flags: pa::StreamCallbackFlags| -> pa::StreamCallbackResult {
+                               flags: pa::StreamCallbackFlags| -> pa::StreamCallbackResult
+        {
             let settings = Settings {
                 sample_hz: sample_hz as u32,
                 frames: frames as u16,
@@ -155,7 +158,9 @@ impl<I> Builder<I> where I: Sample + PaSample {
 
     /// Launch a blocking input stream!
     #[inline]
-    pub fn run(self) -> Result<BlockingStream<I>, Error> {
+    pub fn run(self) -> Result<BlockingStream<I>, Error>
+        where I: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
