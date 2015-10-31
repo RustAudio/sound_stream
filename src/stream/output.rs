@@ -112,7 +112,9 @@ impl<O> Builder<O> where O: Sample + PaSample {
 
     /// Launch a non-blocking output stream with the given callback!
     #[inline]
-    pub fn run_callback(self, mut callback: Callback<O>) -> Result<NonBlockingStream<O>, Error> {
+    pub fn run_callback(self, mut callback: Callback<O>) -> Result<NonBlockingStream<O>, Error>
+        where O: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
@@ -158,7 +160,9 @@ impl<O> Builder<O> where O: Sample + PaSample {
 
     /// Launch a blocking output stream!
     #[inline]
-    pub fn run<'a>(self) -> Result<BlockingStream<'a, O>, Error> {
+    pub fn run<'a>(self) -> Result<BlockingStream<'a, O>, Error>
+        where O: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
@@ -240,7 +244,9 @@ impl<'a, O> Drop for BlockingStream<'a, O> where O: Sample + PaSample {
     }
 }
 
-impl<'a, O> Iterator for BlockingStream<'a, O> where O: Sample + PaSample {
+impl<'a, O> Iterator for BlockingStream<'a, O>
+    where O: Sample + PaSample + 'a
+{
     type Item = Event<'a, O>;
 
     fn next(&mut self) -> Option<Event<'a, O>> {

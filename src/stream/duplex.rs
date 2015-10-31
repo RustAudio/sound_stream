@@ -171,7 +171,11 @@ impl<I, O> Builder<I, O>
 
     /// Launch a non-blocking duplex stream with the given callback!
     #[inline]
-    pub fn run_callback(self, mut callback: Callback<I, O>) -> Result<NonBlockingStream<I, O>, Error> {
+    pub fn run_callback(self, mut callback: Callback<I, O>)
+        -> Result<NonBlockingStream<I, O>, Error>
+        where I: 'static,
+              O: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
@@ -219,7 +223,10 @@ impl<I, O> Builder<I, O>
 
     /// Launch a blocking duplex stream!
     #[inline]
-    pub fn run<'a>(self) -> Result<BlockingStream<'a, I, O>, Error> {
+    pub fn run<'a>(self) -> Result<BlockingStream<'a, I, O>, Error>
+        where I: 'static,
+              O: 'static,
+    {
 
         // Initialize PortAudio.
         try!(pa::initialize().map_err(|err| Error::PortAudio(err)));
@@ -326,8 +333,8 @@ impl<'a, I, O> Drop for BlockingStream<'a, I, O>
 
 impl<'a, I, O> Iterator for BlockingStream<'a, I, O>
     where
-        I: Sample + PaSample,
-        O: Sample + PaSample,
+        I: Sample + PaSample + 'a,
+        O: Sample + PaSample + 'a,
 {
     type Item = Event<'a, I, O>;
 
