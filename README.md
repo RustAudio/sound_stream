@@ -1,3 +1,6 @@
+# DEPRECATED
+
+[rust-portaudio](https://github.com/jeremyletang/rust-portaudio)'s API has improved enough to the point where **sound_stream** is no longer necessary.
 
 # SoundStream [![Build Status](https://travis-ci.org/RustAudio/sound_stream.svg?branch=master)](https://travis-ci.org/RustAudio/sound_stream)
 
